@@ -1,7 +1,7 @@
 from aiogram import types
 
 
-assets = ["BTC", "ETH", "GOLD", "OIL"]
+assets = ["BTC", "ETH", "GOLD", "BR1!", "SPX", "DJI", "AAPL", "MSFT"]
 
 choiced_assets = { a: False for a in assets }  # В будущем значение будет браться из БД
 
@@ -9,9 +9,12 @@ choiced_assets = { a: False for a in assets }  # В будущем значен�
 def get_main_keyboard(choiced_assets):
     printed_assets = [f'✅  {a}' if choiced_assets[a] else a for a in assets]
     kb = [
-        [types.KeyboardButton(text=asset) for asset in printed_assets],
-        [types.KeyboardButton(text='Подтвердить выбор!')],
+        [types.KeyboardButton(text=asset) for asset in printed_assets[i:i + 2]]
+        for i in range(0, len(printed_assets), 2)
     ]
+    kb.append([types.KeyboardButton(text='Пояснение аббревиатур активов')])
+    kb.append([types.KeyboardButton(text='Подтвердить выбор!')])
+
     main_kb = types.ReplyKeyboardMarkup(
         keyboard=kb,
         resize_keyboard=True,
