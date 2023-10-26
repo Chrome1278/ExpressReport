@@ -22,12 +22,40 @@ async def cmd_start(message: types.Message):
     )
 
 
-@dp.message(F.text.lower() != "настройки подписки")
+@dp.message(F.text.lower() == "настройки подписки")
+async def with_puree(message: types.Message):
+    subs = [key for key, value in choiced_assets.items() if value]
+    await message.reply(
+        f"Сейчас вы подписаны на:\n{', '.join(subs)}",
+        reply_markup=get_main_keyboard(choiced_assets)
+    )
+
+
+@dp.message(F.text.lower() == "пояснение аббревиатур активов")
+async def with_puree(message: types.Message):
+    text = """
+    BTC - Bitcoin (Криптовалюта)
+    ETH - Etherium (Криптовалюта)
+    GOLD - Золото (Сырьё)
+    BR1! - Нефть марки Brent (Сырьё)
+    SPX - S&P500 (Индекс)
+    DJI - Dow Jones (Индекс)
+    AAPL - Apple (Технологии)
+    MSFT - Microsoft (Технологии)
+    """
+    await message.reply(
+        f"Ниже представлены пояснения к имеющимся аббревиатурам:\n{text}",
+        reply_markup=get_main_keyboard(choiced_assets)
+    )
+
+
+@dp.message()
 async def handle_message(message: types.Message):
     text = message.text.lower()
     if text == 'подтвердить выбор!':
         subs = [key for key, value in choiced_assets.items() if value]
         if subs:
+
             await message.reply(
                 f"Ваши подписки сохранены!\nВы подписались на:\n{', '.join(subs)}",
                 reply_markup=get_settings_keyboard()
@@ -51,15 +79,6 @@ async def handle_message(message: types.Message):
             await message.reply(
                 f"Вы подписались на {asset}", reply_markup=get_main_keyboard(choiced_assets)
             )
-
-
-@dp.message(F.text.lower() == "настройки подписки")
-async def with_puree(message: types.Message):
-    subs = [key for key, value in choiced_assets.items() if value]
-    await message.reply(
-        f"Сейчас вы подписаны на:\n{', '.join(subs)}",
-        reply_markup=get_main_keyboard(choiced_assets)
-    )
 
 
 async def main():
