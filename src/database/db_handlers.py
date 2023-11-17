@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
 from envs.db_secrets import db_url
-from src.database.db_orm import User
+from src.database.db_orm import User, UserLogInfo
 
 
 engine = create_async_engine(db_url)
