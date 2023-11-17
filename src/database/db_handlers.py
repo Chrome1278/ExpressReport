@@ -36,3 +36,20 @@ async def create_new_user(user_id, user_name, subscribes):
         new_user = User(user_id=user_id, user_name=user_name, subscribes=subscribes)
         session.add(new_user)
         await session.commit()
+
+
+async def update_user_subs(user_id, new_subscribes):
+    async with async_session() as session:
+        user = await session.execute(
+            select(User).filter(User.user_id == user_id)
+        )
+        user_to_update = user.scalar_one_or_none()
+        new_log = UserLogInfo(
+            user_id=user_id,
+            subscribes_before=user_to_update.subscribes,
+            subscribes_after=new_subscribes
+        )
+        user_to_update.subscribes = new_subscribes
+        await session.commit()
+        session.add(new_log)
+        await session.commit()
