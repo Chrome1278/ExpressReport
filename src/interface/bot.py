@@ -1,13 +1,21 @@
 import asyncio
 import logging
-
 from aiogram import F
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters.command import Command
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker
 
 from src.configs.config_reader import config
-from src.interface.keyboards.start_keyboard import choiced_assets, get_main_keyboard
+from src.interface.keyboards.start_keyboard import get_main_keyboard, assets, choiced_assets
 from src.interface.keyboards.settings_keyboard import get_settings_keyboard
+from src.database import db_handlers
+from envs.db_secrets import db_url
+
+
+engine = create_async_engine(db_url)
+async_session = sessionmaker(engine, class_=AsyncSession)
+async_session = async_session()
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=config.bot_token.get_secret_value())
@@ -16,14 +24,38 @@ dp = Dispatcher()
 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
-    await message.answer(
-        "Приветствуем! Выберите финансовые активы из списка ниже, за которыми хотите следить",
-        reply_markup=get_main_keyboard(choiced_assets)
-    )
+    user_id = message.from_user.id
+    is_new_user = await db_handlers.is_new_user(user_id)
+    if is_new_user:
+        first_name = message.from_user.first_name
+        last_name = message.from_user.last_name
+        if last_name:
+            user_name = f"{first_name} {last_name}"
+        else:
+            user_name = first_name
+        for k in assets:
+            choiced_assets[k] = False
+        subscribes = [value for key, value in choiced_assets.items()]
+        await db_handlers.create_new_user(user_id, user_name, subscribes)
+        await message.answer(
+            f"Приветствуем! Выберите финансовые активы из списка ниже, за которыми хотите следить",
+            reply_markup=get_main_keyboard(choiced_assets)
+        )
+    else:
+        current_user_subs = await db_handlers.get_user_subscribes(user_id)
+        for k, v in zip(assets, current_user_subs):
+            choiced_assets[k] = v
+        await message.answer(
+            f"Приветствуем! Выберите финансовые активы из списка ниже, за которыми хотите следить",
+            reply_markup=get_main_keyboard(choiced_assets)
+        )
 
 
 @dp.message(F.text.lower() == "настройки подписки")
-async def with_puree(message: types.Message):
+async def cmd_settings(message: types.Message):
+    current_user_subs = await db_handlers.get_user_subscribes(message.from_user.id)
+    for k, v in zip(assets, current_user_subs):
+        choiced_assets[k] = v
     subs = [key for key, value in choiced_assets.items() if value]
     await message.reply(
         f"Сейчас вы подписаны на:\n{', '.join(subs)}",
@@ -32,7 +64,7 @@ async def with_puree(message: types.Message):
 
 
 @dp.message(F.text.lower() == "пояснение аббревиатур активов")
-async def with_puree(message: types.Message):
+async def cmd_assets_info(message: types.Message):
     text = """
     BTC - Bitcoin (Криптовалюта)
     ETH - Etherium (Криптовалюта)
@@ -54,8 +86,12 @@ async def handle_message(message: types.Message):
     text = message.text.lower()
     if text == 'подтвердить выбор!':
         subs = [key for key, value in choiced_assets.items() if value]
+        subscribes = [value for key, value in choiced_assets.items()]
         if subs:
-
+            user_id = message.from_user.id
+            current_user_subs = await db_handlers.get_user_subscribes(user_id)
+            if subscribes != current_user_subs:
+                await db_handlers.update_user_subs(user_id, subscribes)
             await message.reply(
                 f"Ваши подписки сохранены!\nВы подписались на:\n{', '.join(subs)}",
                 reply_markup=get_settings_keyboard()
