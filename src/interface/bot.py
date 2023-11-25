@@ -3,6 +3,7 @@ import logging
 from aiogram import F
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters.command import Command
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 
@@ -20,6 +21,8 @@ async_session = async_session()
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=config.bot_token.get_secret_value())
 dp = Dispatcher()
+
+scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
 
 
 @dp.message(Command("start"))
@@ -81,6 +84,13 @@ async def cmd_assets_info(message: types.Message):
     )
 
 
+async def send_message_to_user_at_time(user_id: int, message: str):
+    scheduler.add_job(
+        bot.send_message, trigger='cron', hour='10', minute='00', args=(user_id, message)
+    )
+    scheduler.start()
+
+
 @dp.message()
 async def handle_message(message: types.Message):
     text = message.text.lower()
@@ -96,6 +106,13 @@ async def handle_message(message: types.Message):
                 f"Ваши подписки сохранены!\nВы подписались на:\n{', '.join(subs)}",
                 reply_markup=get_settings_keyboard()
             )
+            if scheduler.state == 0:
+                await bot.send_message(
+                    message.from_user.id,
+                    'Теперь по вашим подпискам будет приходить отчёт о настроениях по каждому активу. '
+                    'Он будет появляться каждый день в 10:00. Не забудьте включить уведомления!'
+                )
+                await send_message_to_user_at_time(message.from_user.id, 'ОТЧЁТ!')
         else:
             await message.reply(
                 f"Вы не выбрали ни один из активов.\nВыберите минимум один.",
