@@ -8,11 +8,13 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 
 from src.configs.config_reader import config
+from src.database.db_handlers import get_all_users_id
 from src.interface.keyboards.start_keyboard import get_main_keyboard, assets, choiced_assets
 from src.interface.keyboards.settings_keyboard import get_settings_keyboard
 from src.database import db_handlers
 from envs.db_secrets import db_url
-
+from src.utils.report_preparing import get_report_msg
+from src.utils.tradingview_parser import get_assets_info_from_tv
 
 engine = create_async_engine(db_url)
 async_session = sessionmaker(engine, class_=AsyncSession)
@@ -22,7 +24,8 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=config.bot_token.get_secret_value())
 dp = Dispatcher()
 
-scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
+scheduler_msg = AsyncIOScheduler(timezone="Europe/Moscow")
+scheduler_db = AsyncIOScheduler(timezone="Europe/Moscow")
 
 
 @dp.message(Command("start"))
@@ -71,8 +74,6 @@ async def cmd_assets_info(message: types.Message):
     text = """
     BTC - Bitcoin (Криптовалюта)
     ETH - Etherium (Криптовалюта)
-    GOLD - Золото (Сырьё)
-    BR1! - Нефть марки Brent (Сырьё)
     SPX - S&P500 (Индекс)
     DJI - Dow Jones (Индекс)
     AAPL - Apple (Технологии)
@@ -84,11 +85,33 @@ async def cmd_assets_info(message: types.Message):
     )
 
 
-async def send_message_to_user_at_time(user_id: int, message: str):
-    scheduler.add_job(
-        bot.send_message, trigger='cron', hour='10', minute='00', args=(user_id, message)
+async def load_assets_info_at_time():
+    scheduler_db.add_job(
+        get_assets_info_from_tv,
+        trigger='cron',
+        hour='12',
+        minute='36',
+        second=5
     )
-    scheduler.start()
+    scheduler_db.start()
+
+
+async def send_message_to_user_at_time(user_id: int):
+    scheduler_msg.add_job(
+        bot.send_message,
+        trigger='cron',
+        hour='13',
+        minute='2',
+        # second=30,
+        args=(user_id, await get_report_msg(user_id))
+    )
+    scheduler_msg.start()
+
+
+# async def run_scheduler_for_users():
+#     users_ids = await get_all_users_id()
+#     for user_id in users_ids:
+#         await send_message_to_user_at_time(user_id)
 
 
 @dp.message()
@@ -106,13 +129,14 @@ async def handle_message(message: types.Message):
                 f"Ваши подписки сохранены!\nВы подписались на:\n{', '.join(subs)}",
                 reply_markup=get_settings_keyboard()
             )
-            if scheduler.state == 0:
+            if scheduler_msg.state == 0:
                 await bot.send_message(
                     message.from_user.id,
-                    'Теперь по вашим подпискам будет приходить отчёт о настроениях по каждому активу. '
+                    'Теперь по вашим подпискам будет приходить ежедневный отчёт '
+                    'о настроениях по каждому активу. '
                     'Он будет появляться каждый день в 10:00. Не забудьте включить уведомления!'
                 )
-                await send_message_to_user_at_time(message.from_user.id, 'ОТЧЁТ!')
+                await send_message_to_user_at_time(message.from_user.id)
         else:
             await message.reply(
                 f"Вы не выбрали ни один из активов.\nВыберите минимум один.",
@@ -122,22 +146,31 @@ async def handle_message(message: types.Message):
         if '  ' in text:
             text = text.split()[1]
         asset = text.upper()
-        if choiced_assets[asset]:
-            choiced_assets[asset] = False
-            await message.reply(
-                f"Вы отписались от {asset}", reply_markup=get_main_keyboard(choiced_assets)
-            )
-        else:
-            choiced_assets[asset] = True
-            await message.reply(
-                f"Вы подписались на {asset}", reply_markup=get_main_keyboard(choiced_assets)
-            )
+        if asset in choiced_assets:
+            if choiced_assets[asset]:
+                choiced_assets[asset] = False
+                await message.reply(
+                    f"Вы отписались от {asset}", reply_markup=get_main_keyboard(choiced_assets)
+                )
+            else:
+                choiced_assets[asset] = True
+                await message.reply(
+                    f"Вы подписались на {asset}", reply_markup=get_main_keyboard(choiced_assets)
+                )
+
+
+async def tick():
+    print('Tick! The time is now!')
 
 
 async def main():
     await bot.delete_webhook(drop_pending_updates=True)
+    await load_assets_info_at_time()
     await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    loop = asyncio.new_event_loop()
+    loop.create_task(main())
+    loop.run_forever()
+

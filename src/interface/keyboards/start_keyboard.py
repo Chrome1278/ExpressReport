@@ -1,6 +1,7 @@
 from aiogram import types
 
-assets = ["BTC", "ETH", "GOLD", "BR1!", "SPX", "DJI", "AAPL", "MSFT"]
+from src.configs.assets_description import assets
+
 choiced_assets = {a: False for a in assets}
 
 
