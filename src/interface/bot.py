@@ -89,9 +89,9 @@ async def load_assets_info_at_time():
     scheduler_db.add_job(
         get_assets_info_from_tv,
         trigger='cron',
-        hour='12',
-        minute='36',
-        second=5
+        hour='9',
+        minute='55',
+        # second=5
     )
     scheduler_db.start()
 
@@ -100,8 +100,8 @@ async def send_message_to_user_at_time(user_id: int):
     scheduler_msg.add_job(
         bot.send_message,
         trigger='cron',
-        hour='13',
-        minute='2',
+        hour='10',
+        minute='00',
         # second=30,
         args=(user_id, await get_report_msg(user_id))
     )
