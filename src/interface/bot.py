@@ -8,13 +8,13 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 
 from src.configs.config_reader import config
-from src.database.db_handlers import get_all_users_id
 from src.interface.keyboards.start_keyboard import get_main_keyboard, assets, choiced_assets
 from src.interface.keyboards.settings_keyboard import get_settings_keyboard
 from src.database import db_handlers
 from envs.db_secrets import db_url
 from src.utils.report_preparing import get_report_msg
 from src.utils.tradingview_parser import get_assets_info_from_tv
+
 
 engine = create_async_engine(db_url)
 async_session = sessionmaker(engine, class_=AsyncSession)
@@ -91,7 +91,6 @@ async def load_assets_info_at_time():
         trigger='cron',
         hour='9',
         minute='55',
-        # second=5
     )
     scheduler_db.start()
 
@@ -102,16 +101,9 @@ async def send_message_to_user_at_time(user_id: int):
         trigger='cron',
         hour='10',
         minute='00',
-        # second=30,
         args=(user_id, await get_report_msg(user_id))
     )
     scheduler_msg.start()
-
-
-# async def run_scheduler_for_users():
-#     users_ids = await get_all_users_id()
-#     for user_id in users_ids:
-#         await send_message_to_user_at_time(user_id)
 
 
 @dp.message()
@@ -157,10 +149,6 @@ async def handle_message(message: types.Message):
                 await message.reply(
                     f"Вы подписались на {asset}", reply_markup=get_main_keyboard(choiced_assets)
                 )
-
-
-async def tick():
-    print('Tick! The time is now!')
 
 
 async def main():
