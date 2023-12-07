@@ -67,30 +67,30 @@
 
 Создание окружения:
 ```
-> python3 -m virtualenv .venv
+python3 -m virtualenv .venv
 ```
 Активация окружения (для linux):
 ```
-> source .venv/bin/activate
+source .venv/bin/activate
 ```
 Активация окружения (для windows):
 ```
-> .venv/Scripts/activate
+.venv/Scripts/activate
 ```
 ### 1. Загрузить зависимости проекта:
 ```
-(.venv) > pip install -r ./src/requirements.txt 
+pip install -r ./src/requirements.txt 
 ```
 
 ### 2. Спроектировать Базу данных:
 ```
-(.venv) > python3 -m ./src/database/db_orm.py
+python3 -m ./src/database/db_orm.py
 ```
 _но перед запуском необходимо раскомментировать 47 строку в db_orm.py для создания БД, если у вас её нет._
 
 ### 3. Запустить бота:
 ```
-(.venv) > python3 -m ./src/interface/bot.py
+python3 -m ./src/interface/bot.py
 ```
 
 ## Дальнейшее развитие проекта
