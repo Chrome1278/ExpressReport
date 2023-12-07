@@ -79,7 +79,7 @@
 ```
 ### 1. Загрузить зависимости проекта:
 ```
-(.venv) > pip install -r /path/to/requirements.txt 
+(.venv) > pip install -r ./src/requirements.txt 
 ```
 
 ### 2. Спроектировать Базу данных:
