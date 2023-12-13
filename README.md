@@ -126,4 +126,4 @@ python3 -m ./src/interface/bot.py
   -  [Реализация ORM на основе СУБД PostgreSQL](https://docs.sqlalchemy.org/en/20/orm/)
   -  [Разработка Telegram-бота на основе aiogram 3.0](https://docs.aiogram.dev/en/latest/)
   -  [Извлечение информации с TradingView](https://python-tradingview-ta.readthedocs.io/en/latest/)
-  -  [Работа с переменными окружения](https://habr.com/ru/articles/472674/)
+  -  [Работа с приватными данными](https://habr.com/ru/articles/472674/)
